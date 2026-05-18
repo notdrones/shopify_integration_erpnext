@@ -161,11 +161,20 @@ def map_line_items(
                 rate_excl_gst = net_including_gst
             rate = round(rate_excl_gst / qty, 2)
 
+        # Base unit price (tax exclusive)
+        if tax_rate > 0:
+            base_rate_excl = unit_price / (1.0 + tax_rate / 100.0)
+        else:
+            base_rate_excl = unit_price
+        
+        price_list_rate = round(base_rate_excl, 2)
+
         so_items.append({
             "item_code": item["item_code"],
             "item_name": item["item_name"],
             "qty":       qty,
             "rate":      rate,
+            "price_list_rate": price_list_rate,
             "uom":       item["uom"],
             # Internal keys (stripped / used in sales_order.py)
             "_tax_template":      item["tax_template"],

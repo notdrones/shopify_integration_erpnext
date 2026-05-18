@@ -147,6 +147,9 @@ def create_sales_order_from_shopify(order: dict, settings):
     # ── 8. Build SO items (strip internal _ keys; keep tax template) ──────────
     so_items = []
     for item in items:
+        # Default price_list_rate to rate for shipping rows (which don't carry price_list_rate)
+        price_list_rate = item.get("price_list_rate", item["rate"])
+
         so_items.append({
             "item_code":         item["item_code"],
             "item_name":         item["item_name"],
@@ -154,8 +157,7 @@ def create_sales_order_from_shopify(order: dict, settings):
             "rate":              item["rate"],       # tax-exclusive, already reconciled
             "uom":               item["uom"],
             "item_tax_template": item.get("_tax_template") or "",
-            # Pre-zero so ERPNext's row defaults don't insert anything weird
-            "price_list_rate":    item["rate"],
+            "price_list_rate":    price_list_rate,
             "discount_percentage": 0,
             "discount_amount":     0,
             "margin_type":         "",
@@ -285,8 +287,9 @@ def create_sales_order_from_shopify(order: dict, settings):
     # and then restore.
     _snapshot = [
         {
-            "rate":          flt(row.rate),
-            "tax_template":  row.get("item_tax_template") or "",
+            "rate":            flt(row.rate),
+            "price_list_rate": flt(row.price_list_rate),
+            "tax_template":    row.get("item_tax_template") or "",
         }
         for row in so.items
     ]
@@ -316,18 +319,27 @@ def create_sales_order_from_shopify(order: dict, settings):
     finally:
         frappe.session.user = _prev_session_user
 
-    # ── 13. Restore rates & nuke phantom price-list / margin / discount ───────
+    # ── 13. Restore rates & apply Shopify discount natively ───────
     for row, snap in zip(so.items, _snapshot):
-        shopify_rate = snap["rate"]
+        shopify_rate    = snap["rate"]
+        price_list_rate = snap["price_list_rate"]
+        
+        # If the rounder nudged rate above base, correct base
+        if shopify_rate > price_list_rate:
+            price_list_rate = shopify_rate
+
         row.rate                 = shopify_rate
-        # price_list_rate made equal to rate so ERPNext cannot compute a
-        # synthetic "discount from price list".  Base variants mirrored
-        # so the company-currency columns don't diverge.
-        row.price_list_rate      = shopify_rate
-        row.base_price_list_rate = shopify_rate
+        row.price_list_rate      = price_list_rate
+        row.base_price_list_rate = price_list_rate
         row.base_rate            = shopify_rate
-        row.discount_percentage  = 0
-        row.discount_amount      = 0
+        
+        discount_amount = price_list_rate - shopify_rate
+        row.discount_amount = discount_amount
+        if price_list_rate > 0 and discount_amount > 0:
+            row.discount_percentage = round((discount_amount / price_list_rate) * 100.0, 2)
+        else:
+            row.discount_percentage = 0.0
+
         row.margin_type          = ""
         row.margin_rate_or_amount = 0
         row.rate_with_margin     = 0
@@ -569,12 +581,24 @@ def _absorb_paisa_on_submitted_doc(so, shopify_total: float):
         new_rate = flt(proxy["rate"])
         if new_rate == flt(row.rate):
             continue
+            
+        # Re-sync discount fields against the nudged rate
+        price_list_rate = flt(row.price_list_rate)
+        if new_rate > price_list_rate:
+            price_list_rate = new_rate
+            row.price_list_rate = price_list_rate
+            row.base_price_list_rate = price_list_rate
+            
         row.rate                 = new_rate
-        row.price_list_rate      = new_rate
-        row.base_price_list_rate = new_rate
         row.base_rate            = new_rate
-        row.discount_percentage  = 0
-        row.discount_amount      = 0
+        
+        discount_amount = price_list_rate - new_rate
+        row.discount_amount = discount_amount
+        if price_list_rate > 0 and discount_amount > 0:
+            row.discount_percentage = round((discount_amount / price_list_rate) * 100.0, 2)
+        else:
+            row.discount_percentage = 0.0
+
         row.margin_type          = ""
         row.margin_rate_or_amount = 0
         row.rate_with_margin     = 0
