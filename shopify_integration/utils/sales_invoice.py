@@ -35,6 +35,16 @@ import frappe
 # ── Public helpers for the form JS ────────────────────────────────────────────
 
 @frappe.whitelist()
+def is_sales_invoice_enabled() -> bool:
+    """
+    Return True if at least one Shopify Settings document has
+    enable_sales_invoice = 1.  Called once per list-view load by
+    delivery_note_list.js to decide whether to show Shopify indicators.
+    """
+    return bool(frappe.db.exists("Shopify Settings", {"enable_sales_invoice": 1}))
+
+
+@frappe.whitelist()
 def get_dn_shopify_invoice_status(dn_name: str) -> dict:
     """
     Return a dict with all info the Delivery Note form JS needs to show or hide
