@@ -41,6 +41,16 @@ class ShopifySettings(Document):
                 indicator="orange"
             )
 
+        # Fulfillment push requires an access token.
+        if self.get("enable_fulfillment_push") and not self.get("access_token"):
+            frappe.throw(
+                "<b>Admin API Access Token</b> is required when "
+                "<b>Enable Fulfillment Push</b> is on.<br>"
+                "Add the token from your Shopify Custom App in the "
+                "<b>Connection</b> tab → API Credentials.",
+                title="Access Token Required for Fulfillment",
+            )
+
         # Payment Entry config sanity checks — block save if any selected
         # Bank / Cash account is a group account or wrong type.
         if self.get("enable_payment_entry"):

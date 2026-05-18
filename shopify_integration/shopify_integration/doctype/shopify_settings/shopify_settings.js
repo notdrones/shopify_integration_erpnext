@@ -1,6 +1,23 @@
 frappe.ui.form.on('Shopify Settings', {
 
     refresh: function (frm) {
+        // "Test Connection" button — verifies the access_token by calling
+        // GET /shop.json.  Only shown when the record is saved (has a name).
+        if (frm.doc.name && frm.doc.shop_domain) {
+            frm.add_custom_button(__('Test Shopify Connection'), function () {
+                frappe.xcall(
+                    'shopify_integration.utils.shopify_api.test_shopify_connection',
+                    { store_name: frm.doc.name }
+                ).then(function (result) {
+                    frappe.msgprint({
+                        title:     result.success ? __('Connection Successful') : __('Connection Failed'),
+                        message:   result.message,
+                        indicator: result.success ? 'green' : 'red',
+                    });
+                });
+            }, __('Actions'));
+        }
+
         // Populate Sales Order naming series from ERPNext meta
         frappe.call({
             method: 'shopify_integration.shopify_integration.doctype.shopify_settings.shopify_settings.get_naming_series',

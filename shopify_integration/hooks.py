@@ -40,9 +40,15 @@ doc_events = {
         "on_trash": "shopify_integration.utils.sales_order.clear_shopify_log_on_trash",
     },
     "Delivery Note": {
-        # Immediate SI creation — enqueues a background job when si_dn_timing
-        # is set to "Immediate" in Shopify Settings.  No-ops for all other DNs.
-        "on_submit": "shopify_integration.utils.sales_invoice.create_si_from_dn_on_submit",
+        # Frappe supports a list of handlers for a single event.
+        # Each handler is called in order; a failure in one does NOT block others.
+        "on_submit": [
+            # Immediate SI creation — no-ops when si_dn_timing != "Immediate".
+            "shopify_integration.utils.sales_invoice.create_si_from_dn_on_submit",
+            # Fulfillment push — no-ops when enable_fulfillment_push = 0
+            # or fulfillment_trigger != "On DN Submit".
+            "shopify_integration.utils.fulfillment.on_delivery_note_submit",
+        ],
     },
 }
 

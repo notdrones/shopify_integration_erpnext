@@ -16,10 +16,18 @@ def before_uninstall():
         "Sales Order-shopify_section",
         "Sales Order-shopify_order_id",
         "Sales Order-shopify_store",
+        # Sales Order Item
+        "Sales Order Item-shopify_line_item_id",
         # Delivery Note
         "Delivery Note-shopify_section",
         "Delivery Note-shopify_order_id",
         "Delivery Note-shopify_store",
+        "Delivery Note-shopify_fulfillment_id",
+        "Delivery Note-shopify_fulfillment_status",
+        "Delivery Note-shopify_fulfillment_error",
+        "Delivery Note-shopify_tracking_number",
+        "Delivery Note-shopify_tracking_url",
+        "Delivery Note-shopify_tracking_company",
     ]
     for cf_name in _SHOPIFY_CUSTOM_FIELDS:
         if frappe.db.exists("Custom Field", cf_name):
@@ -46,6 +54,7 @@ def after_install():
 
     create_customer_custom_fields()
     create_sales_order_custom_fields()
+    create_sales_order_item_custom_fields()
     create_delivery_note_custom_fields()
     frappe.db.commit()  # nosemgrep: frappe-manual-commit — install hook runs outside request lifecycle
     print("✅ Shopify Integration: Custom fields created / updated successfully.")
@@ -226,4 +235,81 @@ def create_delivery_note_custom_fields():
         "fieldtype":    "Data",
         "insert_after": "shopify_order_id",
         "read_only":    1,
+    })
+
+    # ── Fulfillment status fields (read-only, written by integration) ───────────
+    create_or_update_custom_field(doctype, {
+        "fieldname":    "shopify_fulfillment_id",
+        "label":        "Shopify Fulfillment ID",
+        "fieldtype":    "Data",
+        "insert_after": "shopify_store",
+        "read_only":    1,
+        "description":  "Set automatically after a fulfillment is pushed to Shopify.",
+    })
+    create_or_update_custom_field(doctype, {
+        "fieldname":    "shopify_fulfillment_status",
+        "label":        "Fulfillment Status",
+        "fieldtype":    "Select",
+        "options":      "\nPending\nFulfilled\nPartially Fulfilled\nFailed\nSkipped",
+        "insert_after": "shopify_fulfillment_id",
+        "read_only":    1,
+    })
+    create_or_update_custom_field(doctype, {
+        "fieldname":    "shopify_fulfillment_error",
+        "label":        "Fulfillment Error",
+        "fieldtype":    "Small Text",
+        "insert_after": "shopify_fulfillment_status",
+        "read_only":    1,
+        "description":  "Last error message when fulfillment push failed. Clear manually after resolving.",
+    })
+
+    # ── Tracking fields (editable by staff before/after submission) ─────────────
+    create_or_update_custom_field(doctype, {
+        "fieldname":    "shopify_tracking_number",
+        "label":        "Tracking Number",
+        "fieldtype":    "Data",
+        "insert_after": "shopify_fulfillment_error",
+        "description":  "Courier tracking / AWB number. Sent to Shopify with the fulfillment and included in the customer notification email.",
+    })
+    create_or_update_custom_field(doctype, {
+        "fieldname":    "shopify_tracking_url",
+        "label":        "Tracking URL",
+        "fieldtype":    "Data",
+        "insert_after": "shopify_tracking_number",
+        "description":  "Full tracking URL (e.g. https://track.delhivery.com/?id=123). Required when Carrier is 'Other'. For recognised carriers Shopify generates the URL automatically.",
+    })
+    create_or_update_custom_field(doctype, {
+        "fieldname":    "shopify_tracking_company",
+        "label":        "Carrier",
+        "fieldtype":    "Select",
+        "options":      (
+            "\nDelhivery\nBlueDart\nDTDC\nEkart\nIndia Post"
+            "\nShadowfax\nXpressbees\nEcom Express\nAmazon Logistics"
+            "\nSmartr Logistics\nPickrr\nNimbuspost\nShypmax"
+            "\nDHL Express\nDHL eCommerce\nDHL eCommerce Asia"
+            "\nFedEx\nUPS\nTNT\nSF Express\nChina Post"
+            "\nDPD\nRoyal Mail\nAustralia Post\nCanada Post"
+            "\nUSPS\n4PX\nSendle\nEvri\nOther"
+        ),
+        "insert_after": "shopify_tracking_url",
+        "description":  "Select the courier. For carriers in the list, Shopify auto-generates the tracking URL. Select 'Other' and provide the full Tracking URL manually for unlisted couriers.",
+    })
+
+
+# ── Sales Order Item custom fields ─────────────────────────────────────────────
+
+def create_sales_order_item_custom_fields():
+    """
+    Add shopify_line_item_id to Sales Order Item rows.
+    This stores the Shopify numeric line_item.id during webhook processing so
+    the fulfillment module can match DN items back to Shopify fulfillment order
+    line items without relying on fragile SKU comparisons.
+    """
+    create_or_update_custom_field("Sales Order Item", {
+        "fieldname":    "shopify_line_item_id",
+        "label":        "Shopify Line Item ID",
+        "fieldtype":    "Data",
+        "insert_after": "item_tax_template",
+        "read_only":    1,
+        "description":  "Shopify order line_item.id. Set automatically during webhook processing. Used for fulfillment matching.",
     })

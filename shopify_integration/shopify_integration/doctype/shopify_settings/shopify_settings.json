@@ -14,6 +14,8 @@
     "webhook_secret",
 
     "tab_connection",
+    "section_api_credentials",
+    "access_token",
     "section_company",
     "company",
     "column_break_company",
@@ -78,6 +80,15 @@
     "section_si_series",
     "si_naming_series",
 
+    "tab_fulfillment",
+    "section_fulfillment_settings",
+    "enable_fulfillment_push",
+    "column_break_fulfillment",
+    "fulfillment_trigger",
+    "notify_customer",
+    "section_fulfillment_advanced",
+    "fulfillment_location_id",
+
     "tab_notifications",
     "section_failure",
     "failure_email_to",
@@ -129,6 +140,19 @@
       "fieldtype": "Tab Break",
       "label": "Connection"
     },
+    {
+      "fieldname": "section_api_credentials",
+      "fieldtype": "Section Break",
+      "label": "API Credentials",
+      "description": "The Admin API access token lets ERPNext make outbound calls to Shopify (fulfillment push, etc.).<br>Find it in your Shopify Partner Dashboard → Apps → your Custom App → API credentials → Admin API access token."
+    },
+    {
+      "fieldname": "access_token",
+      "fieldtype": "Password",
+      "label": "Admin API Access Token",
+      "description": "Required for fulfillment push and any future outbound API features. Keep this confidential."
+    },
+
     {
       "fieldname": "section_company",
       "fieldtype": "Section Break",
@@ -494,6 +518,59 @@
       "label": "Sales Invoice Series",
       "depends_on": "eval:doc.enable_sales_invoice",
       "description": "Naming series for Sales Invoices created from this store. Leave blank to use the default."
+    },
+
+    {
+      "fieldname": "tab_fulfillment",
+      "fieldtype": "Tab Break",
+      "label": "Fulfillment"
+    },
+    {
+      "fieldname": "section_fulfillment_settings",
+      "fieldtype": "Section Break",
+      "label": "Settings",
+      "description": "When enabled, ERPNext will push a fulfillment to Shopify whenever a Delivery Note linked to a Shopify order is submitted. This marks the order items as fulfilled on Shopify and optionally emails the customer.<br><br>Requires the <b>Admin API Access Token</b> to be set in the Connection tab, and the Shopify Custom App must have the <b>write_fulfillments</b> and <b>read_fulfillments</b> scopes."
+    },
+    {
+      "default": "0",
+      "fieldname": "enable_fulfillment_push",
+      "fieldtype": "Check",
+      "label": "Enable Fulfillment Push"
+    },
+    {
+      "fieldname": "column_break_fulfillment",
+      "fieldtype": "Column Break"
+    },
+    {
+      "default": "On DN Submit",
+      "fieldname": "fulfillment_trigger",
+      "fieldtype": "Select",
+      "label": "Push Trigger",
+      "options": "On DN Submit\nManual",
+      "depends_on": "eval:doc.enable_fulfillment_push",
+      "description": "<b>On DN Submit</b> — fulfillment is pushed automatically in a background job the moment the Delivery Note is submitted.<br><b>Manual</b> — staff click the 'Push Fulfillment to Shopify' button on the Delivery Note form. Use this when you need to attach a tracking number before notifying the customer."
+    },
+    {
+      "default": "1",
+      "fieldname": "notify_customer",
+      "fieldtype": "Check",
+      "label": "Notify Customer on Fulfillment",
+      "depends_on": "eval:doc.enable_fulfillment_push",
+      "description": "When checked, Shopify sends the customer a fulfillment notification email (including tracking info if provided)."
+    },
+    {
+      "fieldname": "section_fulfillment_advanced",
+      "fieldtype": "Section Break",
+      "label": "Multi-Location (Advanced)",
+      "depends_on": "eval:doc.enable_fulfillment_push",
+      "description": "Leave blank for single-location stores — Shopify infers the dispatch location automatically from the fulfillment order.<br>If you expand to multiple Shopify locations in the future, enter the Location ID here to override the default. Find it in Shopify Admin → Settings → Locations → click a location → copy the numeric ID from the URL."
+    },
+    {
+      "fieldname": "fulfillment_location_id",
+      "fieldtype": "Data",
+      "label": "Shopify Location ID (Override)",
+      "depends_on": "eval:doc.enable_fulfillment_push",
+      "description": "Optional. Leave blank for single-location stores."
     },
 
     {

@@ -94,12 +94,16 @@ def map_line_items(
         item_total    = unit_price * qty                        # GST-inclusive line total
 
         raw.append({
-            "title":          title,
-            "qty":            qty,
-            "unit_price":     unit_price,
-            "item_total":     item_total,
-            "line_discount":  line_discount,
-            "item":           item,
+            "title":                title,
+            "qty":                  qty,
+            "unit_price":           unit_price,
+            "item_total":           item_total,
+            "line_discount":        line_discount,
+            "item":                 item,
+            # Shopify numeric line_item.id — stored on the SO item row so that
+            # the fulfillment module can match DN items back to Shopify
+            # fulfillment order line items without needing a SKU lookup.
+            "shopify_line_item_id": str(line.get("id") or ""),
         })
 
     # ── Distribute undistributed order-level discount ─────────────────────────
@@ -161,16 +165,28 @@ def map_line_items(
                 rate_excl_gst = net_including_gst
             rate = round(rate_excl_gst / qty, 2)
 
+        # Base unit price (tax exclusive)
+        if tax_rate > 0:
+            base_rate_excl = unit_price / (1.0 + tax_rate / 100.0)
+        else:
+            base_rate_excl = unit_price
+        
+        price_list_rate = round(base_rate_excl, 2)
+
         so_items.append({
             "item_code": item["item_code"],
             "item_name": item["item_name"],
             "qty":       qty,
             "rate":      rate,
+            "price_list_rate": price_list_rate,
             "uom":       item["uom"],
             # Internal keys (stripped / used in sales_order.py)
             "_tax_template":      item["tax_template"],
             "_tax_rate":          tax_rate,
             "_net_including_gst": net_including_gst,
+            # Shopify line_item.id — passed through to SO item row for
+            # fulfillment matching; not written to ERPNext item fields here.
+            "shopify_line_item_id": r.get("shopify_line_item_id", ""),
         })
 
     return so_items
