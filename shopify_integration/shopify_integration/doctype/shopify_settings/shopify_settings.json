@@ -37,6 +37,7 @@
     "payment_terms_partial",
     "payment_terms_pending",
     "section_draft_behaviour",
+    "keep_draft_paid",
     "keep_draft_partial",
     "column_break_draft",
     "keep_draft_pending",
@@ -261,6 +262,13 @@
       "fieldtype": "Section Break",
       "label": "Draft Behaviour",
       "description": "By default all Sales Orders are submitted automatically. Enable these to keep specific order types as Draft for manual review before submission."
+    },
+    {
+      "default": "0",
+      "fieldname": "keep_draft_paid",
+      "fieldtype": "Check",
+      "label": "Keep Draft — Paid",
+      "description": "Sales Orders for 'paid' Shopify orders will be saved as Draft instead of submitted. Payment Entry cannot be created for draft Sales Orders."
     },
     {
       "default": "0",

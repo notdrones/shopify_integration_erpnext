@@ -406,6 +406,7 @@ def create_sales_order_from_shopify(order: dict, settings):
 
     # ── 17. Submit or keep Draft ──────────────────────────────────────────────
     should_keep_draft = (
+        (financial_status == "paid"           and settings.get("keep_draft_paid")) or
         (financial_status == "partially_paid" and settings.get("keep_draft_partial")) or
         (financial_status in ("pending", "voided", "unpaid") and settings.get("keep_draft_pending"))
     )
