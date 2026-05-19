@@ -94,9 +94,32 @@ frappe.ui.form.on('Shopify Settings', {
     company: function (frm) {
         // Re-apply filters when company changes so company scoping stays correct
         _apply_account_filters(frm);
+    },
+
+    keep_draft_paid: function (frm) {
+        _maybe_disable_payment_entry(frm);
+    },
+
+    keep_draft_partial: function (frm) {
+        _maybe_disable_payment_entry(frm);
     }
 
 });
+
+/**
+ * When both Keep Draft — Paid and Keep Draft — Partially Paid are checked,
+ * Payment Entry can never fire (PE requires a submitted SO), so automatically
+ * uncheck Enable Payment Entry Creation and notify the user.
+ */
+function _maybe_disable_payment_entry(frm) {
+    if (frm.doc.keep_draft_paid && frm.doc.keep_draft_partial && frm.doc.enable_payment_entry) {
+        frappe.model.set_value(frm.doctype, frm.docname, 'enable_payment_entry', 0);
+        frappe.show_alert({
+            message: __('Payment Entry Creation has been disabled — it cannot run when both Paid and Partially Paid orders are kept as Draft.'),
+            indicator: 'orange'
+        }, 6);
+    }
+}
 
 /**
  * Restrict Bank / Cash account pickers to:
