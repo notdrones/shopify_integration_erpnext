@@ -45,14 +45,15 @@ def create_payment_entry_from_shopify(so, order: dict, settings) -> str:
     :return:         Payment Entry name, or "" if nothing was created
     """
     # 1. Amount paid (paisa-exact, derived from Shopify totals)
-    amount_paid = _get_amount_paid(order, so)
+    amount_paid = _get_amount_paid(order)
     if amount_paid <= 0:
         return ""
 
     # Guard: skip PE creation if the SO is already fully settled (another PE
     # was submitted and linked to this SO, advancing advance_paid to grand_total).
     # Does NOT cap amount_paid — Shopify's total_price is the source of truth.
-    so_outstanding = flt(so.grand_total) - flt(so.advance_paid or 0)
+    so_total = flt(so.get("rounded_total")) or flt(so.grand_total)
+    so_outstanding = so_total - flt(so.advance_paid or 0)
     if so_outstanding <= 0:
         return ""
 
@@ -162,12 +163,13 @@ def create_payment_entry_from_shopify(so, order: dict, settings) -> str:
     #   SO is referenced                                       (advance_paid updated)
     #   SI finds this PE via the SO-reference lookup in get_advance_payment_entries
     #
-    # Cap to so_outstanding so allocated_amount ≤ outstanding_amount on each row.
-    allocated = min(flt(amount_paid), flt(so_outstanding))
-    pe.paid_amount     = allocated
-    pe.received_amount = allocated
+    # We use the true amount paid for the top-level Payment Entry amounts.
+    # Any excess (e.g. from GST split rounding) becomes an unallocated advance.
+    pe.paid_amount     = flt(amount_paid)
+    pe.received_amount = flt(amount_paid)
 
-    remaining  = allocated
+    # We only allocate up to what's outstanding on the SO for the reference rows.
+    remaining  = min(flt(amount_paid), flt(so_outstanding))
     kept_refs  = []
     for ref in (pe.get("references") or []):
         if remaining <= 0:
@@ -184,9 +186,10 @@ def create_payment_entry_from_shopify(so, order: dict, settings) -> str:
     pe.set("references", kept_refs)
     pe.set("deductions", [])    # clear any write-off / bridge rows ERPNext injected
 
-    # After set_amounts(): total_allocated = allocated = paid_amount → difference = 0.
     pe.set_amounts()
-    pe.difference_amount = 0    # explicit safety; set_amounts() should already yield 0
+    # Explicitly clear difference_amount just in case, though set_amounts() usually sets it to 0
+    # for a straight Receive PE in the same currency.
+    pe.difference_amount = 0
 
     pe.reference_no   = (order.get("name") or order.get("order_number") or str(order.get("id", "")))[:140]
     pe.reference_date = _get_order_date(order)
@@ -231,7 +234,7 @@ def create_payment_entry_from_shopify(so, order: dict, settings) -> str:
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-def _get_amount_paid(order: dict, so) -> float:
+def _get_amount_paid(order: dict) -> float:
     """
     How much has been paid, per Shopify.
 
@@ -242,30 +245,20 @@ def _get_amount_paid(order: dict, so) -> float:
       * When financial_status == 'paid', total_outstanding is "0.00".
       * When financial_status == 'partially_paid', total_outstanding is the
         unpaid balance.
-      * Shopify's total_price is the source of truth — we do NOT cap against
-        so.grand_total, which can differ by a paisa due to GST split-rounding.
     """
     financial_status = (order.get("financial_status") or "").lower()
     total_price      = flt(order.get("total_price"))
     outstanding      = flt(order.get("total_outstanding"))
 
     # Primary path — read directly from Shopify's own fields.
-    # amount_paid = total_price − total_outstanding.
-    # We take this at face value: it is what Shopify actually collected,
-    # and has nothing to do with ERPNext's grand_total (which can differ
-    # by a paisa due to GST split-rounding).  No capping against grand_total.
     if total_price > 0:
         paid = round(total_price - outstanding, 2)
         if paid > 0:
             return paid
 
-    # Fallback — paid but Shopify total_price field is missing/zero
-    if financial_status == "paid":
-        return flt(so.grand_total)
-
-    # Fallback — partially_paid but total_outstanding field is missing:
+    # Fallback — total_price or total_outstanding missing/zero:
     # sum the successful capture/sale transactions from the payload
-    if financial_status == "partially_paid":
+    if financial_status in ("paid", "partially_paid"):
         txns = order.get("transactions") or []
         paid = round(sum(
             flt(t.get("amount"))
