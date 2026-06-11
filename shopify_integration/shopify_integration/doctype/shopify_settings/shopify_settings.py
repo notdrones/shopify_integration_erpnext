@@ -67,6 +67,20 @@ class ShopifySettings(Document):
                 title="Credit Note Creation Mode Required",
             )
 
+        # e-Invoice / e-Waybill require a submitted SI — warn when auto-submit is off.
+        _e_compliance_on = (
+            self.get("enable_e_invoice") or self.get("enable_e_waybill")
+        )
+        if _e_compliance_on and not self.get("auto_submit_sales_invoice"):
+            frappe.msgprint(
+                "e-Invoice / e-Waybill generation requires a <b>submitted</b> Sales Invoice. "
+                "Enable <b>Auto-Submit Sales Invoice</b> on the Sales Invoice tab, "
+                "otherwise these settings will have no effect.",
+                indicator="orange",
+                title="e-Compliance: Auto-Submit Required",
+                alert=True,
+            )
+
         # Delay hours must be a non-negative integer.
         if (
             self.get("enable_sales_invoice")

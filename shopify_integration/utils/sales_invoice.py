@@ -235,6 +235,7 @@ def create_sales_invoice_from_so(so, settings, pe_name: str = None) -> str:
     if settings.get("auto_submit_sales_invoice"):
         si.flags.ignore_permissions = True
         si.submit()
+        _trigger_e_compliance(si.name, settings)
 
     frappe.db.commit()  # nosemgrep: frappe-manual-commit — runs in background job; SI must persist for advance allocation
     return si.name
@@ -279,6 +280,17 @@ def create_sales_invoice_from_dn(dn_name: str, settings) -> str:
     if settings.get("auto_submit_sales_invoice"):
         si.flags.ignore_permissions = True
         si.submit()
+        _trigger_e_compliance(si.name, settings)
 
     frappe.db.commit()  # nosemgrep: frappe-manual-commit — runs in scheduler/background job; SI must persist independently
     return si.name
+
+
+# ── Private helpers ────────────────────────────────────────────────────────────
+
+def _trigger_e_compliance(si_name: str, settings) -> None:
+    """Enqueue e-Invoice / e-Waybill jobs if either flag is on in settings."""
+    if not (settings.get("enable_e_invoice") or settings.get("enable_e_waybill")):
+        return
+    from shopify_integration.utils.e_compliance import trigger_e_compliance_for_si
+    trigger_e_compliance_for_si(si_name, settings)

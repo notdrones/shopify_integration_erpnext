@@ -87,6 +87,11 @@
     "section_cn_series",
     "cn_naming_series",
 
+    "section_e_compliance",
+    "enable_e_invoice",
+    "column_break_e_compliance",
+    "enable_e_waybill",
+
     "tab_notifications",
     "section_failure",
     "failure_email_to",
@@ -559,6 +564,34 @@
       "label": "Credit Note Series",
       "depends_on": "eval:doc.enable_credit_note && doc.credit_note_creation == 'Auto'",
       "description": "Naming series for Credit Notes created from this store. Leave blank to use the ERPNext default."
+    },
+
+    {
+      "fieldname": "section_e_compliance",
+      "fieldtype": "Section Break",
+      "label": "E-Compliance (India GST)",
+      "depends_on": "eval:doc.enable_sales_invoice",
+      "description": "Requires the <b>India Compliance</b> app. After the Sales Invoice is submitted, automatically trigger e-Invoice and/or e-Waybill generation via the IRP portal.<br><br>Each document is processed in a separate background job — a portal error or timeout never blocks or reverses the Sales Invoice.<br><br><b>Prerequisite:</b> <i>Auto-Submit Sales Invoice</i> must be enabled — e-Invoice and e-Waybill can only be generated for submitted documents.<br><br>India Compliance handles per-company eligibility internally (applicable companies list, turnover threshold, B2B/B2C) — ineligible invoices are skipped silently."
+    },
+    {
+      "default": "0",
+      "fieldname": "enable_e_invoice",
+      "fieldtype": "Check",
+      "label": "Generate e-Invoice",
+      "depends_on": "eval:doc.enable_sales_invoice",
+      "description": "Calls <code>generate_e_invoice()</code> from India Compliance after the Sales Invoice is submitted. IRN is registered with the IRP and stored on the Sales Invoice."
+    },
+    {
+      "fieldname": "column_break_e_compliance",
+      "fieldtype": "Column Break"
+    },
+    {
+      "default": "0",
+      "fieldname": "enable_e_waybill",
+      "fieldtype": "Check",
+      "label": "Generate e-Waybill",
+      "depends_on": "eval:doc.enable_sales_invoice",
+      "description": "Calls <code>generate_e_waybill()</code> from India Compliance after the Sales Invoice is submitted. Generates Part A of the e-Waybill — update Part B (transporter / vehicle details) manually once the shipment is assigned."
     },
 
     {
