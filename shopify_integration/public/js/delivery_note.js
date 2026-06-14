@@ -61,14 +61,6 @@ frappe.ui.form.on('Delivery Note', {
                     });
                 }, __('Shopify'));
             }
-
-            // Hide the default Create > Sales Invoice menu option for Shopify DNs
-            // to avoid bypassing integration logic (naming series, cost center, etc.)
-            setTimeout(() => {
-                if (frm.custom_buttons && frm.custom_buttons['Sales Invoice']) {
-                    frm.remove_custom_button('Sales Invoice', 'Create');
-                }
-            }, 100);
         });
     }
 });
