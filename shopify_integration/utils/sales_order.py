@@ -21,6 +21,8 @@ Flow:
 13.  Send failure email if anything goes wrong
 """
 
+import time
+
 import frappe
 from frappe.utils import nowdate, flt
 from shopify_integration.utils.customer import (
@@ -417,7 +419,21 @@ def create_sales_order_from_shopify(order: dict, settings):
     )
 
     if not should_keep_draft:
-        so.submit()
+        # Retry submit for transient tabBin deadlocks.  When multiple Shopify
+        # orders processing concurrently touch the same item-warehouse bin,
+        # MySQL optimistic locking raises error 1020.  The contention clears
+        # within milliseconds — three attempts with a short backoff is enough.
+        _MAX_SUBMIT_RETRIES = 3
+        for _attempt in range(_MAX_SUBMIT_RETRIES):
+            try:
+                so.submit()
+                break
+            except frappe.QueryDeadlockError:
+                if _attempt >= _MAX_SUBMIT_RETRIES - 1:
+                    raise
+                frappe.db.rollback()
+                time.sleep(0.4 * (_attempt + 1))  # 0.4 s, 0.8 s
+                so.reload()
 
     # ── 18. Payment Entry (optional — controlled by Shopify Settings) ─────────
     # Creates a Payment Entry against the submitted SO for paid/partially_paid
