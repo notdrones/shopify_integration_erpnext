@@ -5,6 +5,11 @@ Called from sales_invoice.py after a Shopify Sales Invoice is submitted.
 Both operations are enqueued as independent background jobs so a portal
 error or IRP timeout never blocks or rolls back the Sales Invoice.
 
+Conflict-safety: if GST Settings has auto_generate_e_invoice / auto_generate_e_waybill
+enabled, India Compliance fires its own hooks on SI submit.  Our background jobs
+check whether the document was already processed before making any IRP call, so
+enabling both paths never results in duplicate portal requests.
+
 Entry point:
   trigger_e_compliance_for_si(si_name, settings)
       Checks the two flags on Shopify Settings and enqueues the relevant jobs.
@@ -24,6 +29,9 @@ def trigger_e_compliance_for_si(si_name: str, settings) -> None:
 
     Uses enqueue_after_commit=True so the SI is fully committed to the database
     before the IRP portal call starts — a portal failure can never roll back the SI.
+
+    The job_name deduplication key prevents the same SI from being enqueued twice
+    if the webhook fires more than once.
 
     :param si_name:  Submitted Sales Invoice name
     :param settings: Shopify Settings document for this store
@@ -55,21 +63,37 @@ def _generate_e_invoice(si_name: str) -> None:
     """
     Background job: generate an e-Invoice for a submitted Sales Invoice.
 
-    e-Invoice is only applicable to B2B transactions (customer has a GSTIN).
-    We check gst_category on the SI before calling India Compliance so we
-    never create an Integration Request log for ineligible B2C invoices.
+    Guards:
+    - Skips B2C invoices (gst_category not in B2B / SEZ / Deemed Export) — IRP
+      rejects these and India Compliance would create a spurious Integration Request.
+    - Skips if an IRN is already set on the SI, meaning India Compliance's own
+      auto_generate_e_invoice hook already ran.  This prevents duplicate IRP calls
+      when both Shopify Settings and GST Settings auto-generation are enabled.
     """
     si_data = frappe.db.get_value(
-        "Sales Invoice", si_name, ["gst_category", "billing_address_gstin"], as_dict=True
+        "Sales Invoice",
+        si_name,
+        ["gst_category", "irn"],
+        as_dict=True,
     )
     if not si_data:
         return
 
-    # e-Invoice is only for B2B (registered buyers with GSTIN).
-    # B2C Large, B2C Small, and Unregistered are all ineligible.
-    if (si_data.gst_category or "") not in ("B2B", "SEZ With Payment", "SEZ Without Payment", "Deemed Export"):
+    # Only B2B transactions are eligible for e-Invoice.
+    if (si_data.gst_category or "") not in (
+        "B2B", "SEZ With Payment", "SEZ Without Payment", "Deemed Export"
+    ):
         frappe.logger().info(
-            f"Shopify: e-Invoice skipped for {si_name} — gst_category is '{si_data.gst_category}' (not B2B)"
+            f"Shopify: e-Invoice skipped for {si_name} — "
+            f"gst_category '{si_data.gst_category}' is not eligible"
+        )
+        return
+
+    # Already generated — India Compliance sets irn on the SI after a successful
+    # IRP call.  Skip to avoid a duplicate portal request and Integration Request log.
+    if si_data.irn:
+        frappe.logger().info(
+            f"Shopify: e-Invoice skipped for {si_name} — IRN already present ({si_data.irn})"
         )
         return
 
@@ -99,26 +123,23 @@ def _generate_e_waybill(si_name: str) -> None:
     """
     Background job: generate an e-Waybill for a submitted Sales Invoice.
 
-    e-Waybill is mandatory when taxable value of goods > ₹50,000 and goods
-    are being transported.  It applies to both B2B and B2C transactions above
-    that threshold — India Compliance validates eligibility internally.
-
-    We pre-check the grand_total so we don't hit the IRP portal for small
-    invoices that are clearly below the ₹50,000 threshold.
+    Guards:
+    - Skips if an E Waybill Log already exists for this SI, meaning India
+      Compliance's own auto_generate_e_waybill hook already ran.  This prevents
+      duplicate IRP calls when both Shopify Settings and GST Settings
+      auto-generation are enabled.
+    - Eligibility (value threshold, inter/intra-state, HSN, etc.) is enforced by
+      India Compliance internally — we do not duplicate that logic here.
     """
-    si_data = frappe.db.get_value(
-        "Sales Invoice", si_name, ["grand_total", "currency"], as_dict=True
+    # Already generated — India Compliance creates an E Waybill Log record after a
+    # successful IRP call.  Skip to avoid a duplicate portal request.
+    already_generated = frappe.db.exists(
+        "E Waybill Log",
+        {"reference_name": si_name, "doctype_name": "Sales Invoice"},
     )
-    if not si_data:
-        return
-
-    # Skip IRP call for invoices clearly below the ₹50,000 threshold.
-    # India Compliance will still enforce the exact taxable-value check;
-    # this is just a cheap early exit for small Shopify orders.
-    if (si_data.currency or "INR") == "INR" and (si_data.grand_total or 0) < 50000:
+    if already_generated:
         frappe.logger().info(
-            f"Shopify: e-Waybill skipped for {si_name} — grand_total "
-            f"₹{si_data.grand_total} is below ₹50,000 threshold"
+            f"Shopify: e-Waybill skipped for {si_name} — E Waybill Log already exists"
         )
         return
 
