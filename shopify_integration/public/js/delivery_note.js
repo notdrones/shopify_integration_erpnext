@@ -21,11 +21,11 @@ frappe.ui.form.on('Delivery Note', {
             } else {
                 // Submitted DN, SI not yet created — pending or failed
                 if (info.si_timing === 'Immediate') {
-                    msg = __('<b>Shopify Order:</b> Sales Invoice auto-creation may be pending or has failed. Use <b>Create &rarr; Sales Invoice</b> to create it manually.');
+                    msg = __('<b>Shopify Order:</b> Sales Invoice auto-creation may be pending or has failed.');
                 } else if (info.delay_hours > 0) {
-                    msg = __('<b>Shopify Order:</b> Sales Invoice will be auto-generated {0} hour(s) after submission. Use <b>Create &rarr; Sales Invoice</b> to create it immediately.', [info.delay_hours]);
+                    msg = __('<b>Shopify Order:</b> Sales Invoice will be auto-generated {0} hour(s) after submission.', [info.delay_hours]);
                 } else {
-                    msg = __('<b>Shopify Order:</b> Sales Invoice auto-creation is pending (next scheduler run). Use <b>Create &rarr; Sales Invoice</b> to create it now.');
+                    msg = __('<b>Shopify Order:</b> Sales Invoice auto-creation is pending (next scheduler run).');
                 }
             }
 
