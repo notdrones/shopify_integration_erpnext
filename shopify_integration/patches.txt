@@ -1,1 +1,2 @@
 # Add patches here
+shopify_integration.patches.add_activity_log_index

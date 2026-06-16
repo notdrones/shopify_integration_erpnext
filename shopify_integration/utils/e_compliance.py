@@ -123,7 +123,7 @@ def _generate_e_invoice(si_name: str) -> None:
                     frappe.get_traceback(),
                     f"Shopify: e-Invoice Generation Failed (deadlock) — {si_name}",
                 )
-                break
+                raise  # let RQ mark the job failed — not a silent success
             frappe.db.rollback()
             time.sleep(0.5 * (_attempt + 1))
             # IRP call may have succeeded before the deadlock hit db_set.
@@ -190,7 +190,7 @@ def _generate_e_waybill(si_name: str) -> None:
                     frappe.get_traceback(),
                     f"Shopify: e-Waybill Generation Failed (deadlock) — {si_name}",
                 )
-                break
+                raise  # let RQ mark the job failed — not a silent success
             frappe.db.rollback()
             time.sleep(0.5 * (_attempt + 1))
             # The IRP call may have succeeded before the deadlock hit db_set.

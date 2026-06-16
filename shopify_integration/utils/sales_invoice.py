@@ -29,6 +29,8 @@ Doc-event handler:
       Enqueues a background job so the form submit is not blocked.
 """
 
+import time
+
 import frappe
 
 
@@ -323,6 +325,7 @@ def create_sales_invoice_from_so(so, settings, pe_name: str = None) -> str:
 
     si.flags.ignore_permissions = True
     si.insert()
+    frappe.db.commit()  # nosemgrep: frappe-manual-commit — isolates insert from submit transaction so deadlock retries are safe
 
     if settings.get("auto_submit_sales_invoice"):
         si.flags.ignore_permissions = True
@@ -390,6 +393,7 @@ def create_sales_invoice_from_dn(dn_name: str, settings) -> str:
 
     si.flags.ignore_permissions = True
     si.insert()
+    frappe.db.commit()  # nosemgrep: frappe-manual-commit — isolates insert from submit transaction so deadlock retries are safe
 
     if settings.get("auto_submit_sales_invoice"):
         si.flags.ignore_permissions = True
@@ -402,7 +406,7 @@ def create_sales_invoice_from_dn(dn_name: str, settings) -> str:
                 if _attempt >= _MAX_SUBMIT_RETRIES - 1:
                     raise
                 frappe.db.rollback()
-                import time; time.sleep(0.4 * (_attempt + 1))
+                time.sleep(0.4 * (_attempt + 1))
                 si.reload()
         _trigger_e_compliance(si.name, settings)
 

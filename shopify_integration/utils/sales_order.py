@@ -400,6 +400,11 @@ def create_sales_order_from_shopify(order: dict, settings):
         else:
             raise
 
+    # Commit the draft SO before submitting.  Without this, a QueryDeadlockError
+    # during submit causes frappe.db.rollback() to undo the insert as well —
+    # so.reload() then raises DoesNotExistError and the retry loop never recovers.
+    frappe.db.commit()  # nosemgrep: frappe-manual-commit — isolates insert from submit transaction so deadlock retries are safe
+
     # ── 16. Final total reconciliation guard ──────────────────────────────────
     # If somehow ERPNext's tax pass still leaves a paisa off (for example when
     # India Compliance splits 18% into 9%+9% and each rounds independently),
