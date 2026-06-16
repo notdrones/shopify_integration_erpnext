@@ -58,10 +58,12 @@ def _process_store(settings):
       - Delivery Note is submitted (docstatus = 1)
       - At least one DN item links back to a submitted Sales Order whose
         shopify_store matches this settings record
-      - An Activity Log 'Submit' entry for the DN exists and is at least
-        si_dn_delay_hours old — this is the true submission timestamp,
-        unaffected by any post-submit edits (transporter details, e-Waybill
-        fields, posting time corrections, etc.)
+      - Delay check (primary): Activity Log 'Submit' entry for the DN is at
+        least si_dn_delay_hours old — the true submission timestamp, unaffected
+        by any post-submit edits (transporter details, e-Waybill fields, etc.)
+        Fallback: when no Submit entry exists in Activity Log (disabled site,
+        purged logs, scripted submission), dn.creation + 2h buffer is used so
+        the DN is never permanently excluded.
       - No submitted (or draft) Sales Invoice already references this DN
     """
     delay_hours = int(settings.get("si_dn_delay_hours") or 0)
@@ -76,12 +78,26 @@ def _process_store(settings):
           AND dn.is_return  = 0
           AND so.docstatus  = 1
           AND so.shopify_store = %(store)s
-          AND EXISTS (
-              SELECT 1 FROM `tabActivity Log` al
-              WHERE al.reference_doctype = 'Delivery Note'
-                AND al.reference_name = dn.name
-                AND al.operation = 'Submit'
-                AND TIMESTAMPDIFF(HOUR, al.creation, NOW()) >= %(delay_hours)s
+          AND (
+              -- Primary: exact submission time from Activity Log.
+              EXISTS (
+                  SELECT 1 FROM `tabActivity Log` al
+                  WHERE al.reference_doctype = 'Delivery Note'
+                    AND al.reference_name = dn.name
+                    AND al.operation = 'Submit'
+                    AND TIMESTAMPDIFF(HOUR, al.creation, NOW()) >= %(delay_hours)s
+              )
+              -- Fallback: no Activity Log Submit row (logs disabled/purged/scripted submit).
+              -- Use dn.creation with a 2-hour buffer so DNs are never permanently excluded.
+              OR (
+                  NOT EXISTS (
+                      SELECT 1 FROM `tabActivity Log` al2
+                      WHERE al2.reference_doctype = 'Delivery Note'
+                        AND al2.reference_name = dn.name
+                        AND al2.operation = 'Submit'
+                  )
+                  AND TIMESTAMPDIFF(HOUR, dn.creation, NOW()) >= %(delay_hours)s + 2
+              )
           )
           AND NOT EXISTS (
               SELECT 1
