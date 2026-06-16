@@ -393,7 +393,17 @@ def create_sales_invoice_from_dn(dn_name: str, settings) -> str:
 
     if settings.get("auto_submit_sales_invoice"):
         si.flags.ignore_permissions = True
-        si.submit()
+        _MAX_SUBMIT_RETRIES = 3
+        for _attempt in range(_MAX_SUBMIT_RETRIES):
+            try:
+                si.submit()
+                break
+            except frappe.QueryDeadlockError:
+                if _attempt >= _MAX_SUBMIT_RETRIES - 1:
+                    raise
+                frappe.db.rollback()
+                import time; time.sleep(0.4 * (_attempt + 1))
+                si.reload()
         _trigger_e_compliance(si.name, settings)
 
     frappe.db.commit()  # nosemgrep: frappe-manual-commit — runs in scheduler/background job; SI must persist independently
@@ -436,9 +446,7 @@ def _send_si_failure_email(settings, reference_type: str, reference_name: str, e
     <p><b>How to create the Sales Invoice manually:</b></p>
     <ol style="font-family:Arial;font-size:13px;line-height:1.8;">
       <li>Open the <b>{reference_type}</b> <code>{reference_name}</code> in ERPNext.</li>
-      <li>Click the <b>Shopify</b> button group &rarr; <b>Create Sales Invoice</b>.<br>
-          <em>(This button appears automatically on submitted Shopify Delivery Notes.)</em></li>
-      <li>If the button is not visible, create it manually via <b>Create &rarr; Sales Invoice</b>.</li>
+      <li>Click <b>Create &rarr; Sales Invoice</b>.</li>
     </ol>
     <p><b>Failure reason:</b></p>
     <pre style="background:#fef2f2;padding:10px;border-left:4px solid #ef4444;font-size:12px;white-space:pre-wrap;">{error_message[:2000]}</pre>
