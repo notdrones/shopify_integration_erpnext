@@ -52,6 +52,7 @@ def trigger_e_compliance_for_si(si_name: str, settings) -> None:
         frappe.enqueue(
             "shopify_integration.utils.e_compliance._generate_e_waybill",
             si_name=si_name,
+            e_waybill_threshold=settings.get("e_waybill_threshold") or None,
             queue="default",
             timeout=120,
             job_name=f"shopify_ewaybill_{si_name}",
@@ -142,18 +143,33 @@ def _generate_e_invoice(si_name: str) -> None:
             break
 
 
-def _generate_e_waybill(si_name: str) -> None:
+def _generate_e_waybill(si_name: str, e_waybill_threshold=None) -> None:
     """
     Background job: generate an e-Waybill for a submitted Sales Invoice.
 
     Guards:
+    - If e_waybill_threshold is set in Shopify Settings, skips the IRP call when
+      the SI's grand_total is below that value.  Protects against a misconfigured
+      GST Settings threshold (e.g. ₹0) triggering e-Waybills for low-value orders.
+      When e_waybill_threshold is None, the threshold check is delegated to India
+      Compliance (which reads from GST Settings).
     - Skips if an E Waybill Log already exists for this SI, meaning India
       Compliance's own auto_generate_e_waybill hook already ran.  This prevents
       duplicate IRP calls when both Shopify Settings and GST Settings
       auto-generation are enabled.
-    - Eligibility (value threshold, inter/intra-state, HSN, etc.) is enforced by
-      India Compliance internally — we do not duplicate that logic here.
+    - All other eligibility checks (inter/intra-state, HSN, etc.) are enforced by
+      India Compliance internally.
     """
+    # Shopify Settings threshold guard — only active when explicitly configured.
+    if e_waybill_threshold:
+        grand_total = frappe.db.get_value("Sales Invoice", si_name, "grand_total") or 0
+        if grand_total < e_waybill_threshold:
+            frappe.logger().info(
+                f"Shopify: e-Waybill skipped for {si_name} — "
+                f"grand_total {grand_total} is below Shopify threshold {e_waybill_threshold}"
+            )
+            return
+
     # Already generated — India Compliance creates an E Waybill Log record after a
     # successful IRP call.  Skip to avoid a duplicate portal request.
     already_generated = frappe.db.exists(

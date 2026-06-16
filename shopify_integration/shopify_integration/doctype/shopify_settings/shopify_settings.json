@@ -12,7 +12,6 @@
     "shop_domain",
     "enable_sync",
     "webhook_secret",
-
     "tab_connection",
     "section_company",
     "company",
@@ -21,7 +20,6 @@
     "section_addresses",
     "company_address",
     "dispatch_address",
-
     "tab_order_defaults",
     "section_naming",
     "naming_series",
@@ -41,7 +39,6 @@
     "keep_draft_partial",
     "column_break_draft",
     "keep_draft_pending",
-
     "tab_accounting",
     "section_dimensions",
     "cost_center",
@@ -51,7 +48,6 @@
     "shipping_item",
     "section_gst",
     "gst_field_path",
-
     "tab_payment_entry",
     "section_pe_settings",
     "enable_payment_entry",
@@ -65,7 +61,6 @@
     "default_bank_account",
     "section_pe_mapping",
     "payment_gateway_mapping",
-
     "tab_sales_invoice",
     "section_si_settings",
     "enable_sales_invoice",
@@ -78,7 +73,6 @@
     "si_dn_delay_hours",
     "section_si_series",
     "si_naming_series",
-
     "tab_returns",
     "section_cn_settings",
     "enable_credit_note",
@@ -87,13 +81,12 @@
     "auto_submit_credit_note",
     "section_cn_series",
     "cn_naming_series",
-
     "tab_compliance",
     "section_e_compliance",
     "enable_e_invoice",
     "column_break_e_compliance",
     "enable_e_waybill",
-
+    "e_waybill_threshold",
     "tab_advanced",
     "section_failure",
     "failure_email_to",
@@ -105,7 +98,6 @@
     "field_mapping"
   ],
   "fields": [
-
     {
       "fieldname": "store_name",
       "fieldtype": "Data",
@@ -122,7 +114,7 @@
       "reqd": 1,
       "unique": 1,
       "in_list_view": 1,
-      "description": "Your Shopify store domain, e.g. notdrones.myshopify.com — must match the X-Shopify-Shop-Domain header sent in webhooks."
+      "description": "Your Shopify store domain, e.g. notdrones.myshopify.com \u00e2\u20ac\u201d must match the X-Shopify-Shop-Domain header sent in webhooks."
     },
     {
       "default": "0",
@@ -136,9 +128,8 @@
       "fieldname": "webhook_secret",
       "fieldtype": "Password",
       "label": "Webhook Secret",
-      "description": "Signing secret from Shopify Admin → Settings → Notifications → Webhooks. Used to verify that incoming requests are genuinely from Shopify."
+      "description": "Signing secret from Shopify Admin \u00e2\u2020\u2019 Settings \u00e2\u2020\u2019 Notifications \u00e2\u2020\u2019 Webhooks. Used to verify that incoming requests are genuinely from Shopify."
     },
-
     {
       "fieldname": "tab_connection",
       "fieldtype": "Tab Break",
@@ -178,7 +169,7 @@
       "fieldtype": "Link",
       "label": "Company Address",
       "options": "Address",
-      "description": "Your company's billing address — printed on Sales Orders."
+      "description": "Your company's billing address \u00e2\u20ac\u201d printed on Sales Orders."
     },
     {
       "fieldname": "dispatch_address",
@@ -187,7 +178,6 @@
       "options": "Address",
       "description": "Address goods are dispatched from. India Compliance uses this to determine intra-state vs inter-state GST. Leave blank to fall back to Company Address."
     },
-
     {
       "fieldname": "tab_order_defaults",
       "fieldtype": "Tab Break",
@@ -213,7 +203,7 @@
       "fieldtype": "Link",
       "label": "Price List",
       "options": "Price List",
-      "description": "Price list to attach to Sales Orders. Rates are always taken directly from the Shopify order — the price list is used for reference only."
+      "description": "Price list to attach to Sales Orders. Rates are always taken directly from the Shopify order \u00e2\u20ac\u201d the price list is used for reference only."
     },
     {
       "fieldname": "customer_naming_series",
@@ -281,14 +271,14 @@
       "default": "0",
       "fieldname": "keep_draft_paid",
       "fieldtype": "Check",
-      "label": "Keep Draft — Paid",
+      "label": "Keep Draft \u00e2\u20ac\u201d Paid",
       "description": "Sales Orders for 'paid' Shopify orders will be saved as Draft instead of submitted. Payment Entry cannot be created for draft Sales Orders."
     },
     {
       "default": "0",
       "fieldname": "keep_draft_partial",
       "fieldtype": "Check",
-      "label": "Keep Draft — Partially Paid",
+      "label": "Keep Draft \u00e2\u20ac\u201d Partially Paid",
       "description": "Sales Orders for 'partially_paid' Shopify orders will be saved as Draft instead of submitted."
     },
     {
@@ -299,10 +289,9 @@
       "default": "0",
       "fieldname": "keep_draft_pending",
       "fieldtype": "Check",
-      "label": "Keep Draft — Pending / Unpaid",
+      "label": "Keep Draft \u00e2\u20ac\u201d Pending / Unpaid",
       "description": "Sales Orders for 'pending', 'voided', or 'unpaid' Shopify orders will be saved as Draft instead of submitted."
     },
-
     {
       "fieldname": "tab_accounting",
       "fieldtype": "Tab Break",
@@ -353,9 +342,8 @@
       "fieldname": "gst_field_path",
       "fieldtype": "Data",
       "label": "GSTIN Shopify Field Path",
-      "description": "Dot-notation path in the Shopify order payload where the customer's GSTIN is stored. e.g. <code>billing_address.company</code>. The value is validated against the standard GSTIN format — non-GSTIN values at this path are ignored. Leave blank to disable GST-based resolution."
+      "description": "Dot-notation path in the Shopify order payload where the customer's GSTIN is stored. e.g. <code>billing_address.company</code>. The value is validated against the standard GSTIN format \u00e2\u20ac\u201d non-GSTIN values at this path are ignored. Leave blank to disable GST-based resolution."
     },
-
     {
       "fieldname": "tab_payment_entry",
       "fieldtype": "Tab Break",
@@ -427,9 +415,9 @@
     {
       "fieldname": "section_pe_mapping",
       "fieldtype": "Section Break",
-      "label": "Gateway → Account Mapping",
+      "label": "Gateway \u00e2\u2020\u2019 Account Mapping",
       "depends_on": "eval:doc.enable_payment_entry",
-      "description": "Map each Shopify payment gateway to an ERPNext Bank / Cash Account. Rows are evaluated <b>top-down — first match wins</b>.<br><br><b>Tag Contains</b> (higher priority) — matches if the order's <i>tags</i> field contains this text (case-insensitive). Use this when your payment app registers orders as 'manual' but tags them 'CASHFREE', 'RAZORPAY', etc.<br><b>Shopify Gateway</b> — matches against <i>payment_gateway_names[0]</i> in the webhook. Exact match first, then similarity-based fallback.<br><br>Tip: open any Shopify Log → Raw Payload to see the exact <i>payment_gateway_names</i> and <i>tags</i> your store sends."
+      "description": "Map each Shopify payment gateway to an ERPNext Bank / Cash Account. Rows are evaluated <b>top-down \u00e2\u20ac\u201d first match wins</b>.<br><br><b>Tag Contains</b> (higher priority) \u00e2\u20ac\u201d matches if the order's <i>tags</i> field contains this text (case-insensitive). Use this when your payment app registers orders as 'manual' but tags them 'CASHFREE', 'RAZORPAY', etc.<br><b>Shopify Gateway</b> \u00e2\u20ac\u201d matches against <i>payment_gateway_names[0]</i> in the webhook. Exact match first, then similarity-based fallback.<br><br>Tip: open any Shopify Log \u00e2\u2020\u2019 Raw Payload to see the exact <i>payment_gateway_names</i> and <i>tags</i> your store sends."
     },
     {
       "fieldname": "payment_gateway_mapping",
@@ -438,7 +426,6 @@
       "options": "Shopify Payment Gateway Mapping",
       "depends_on": "eval:doc.enable_payment_entry"
     },
-
     {
       "fieldname": "tab_sales_invoice",
       "fieldtype": "Tab Break",
@@ -448,7 +435,7 @@
       "fieldname": "section_si_settings",
       "fieldtype": "Section Break",
       "label": "Settings",
-      "description": "Automatically create a Sales Invoice after the Sales Order is processed. Works with or without Payment Entry.<br><br><b>After Payment Entry</b> — Invoice is created right after the Payment Entry succeeds. If Payment Entry is disabled, the Invoice is created immediately after Sales Order submission.<br><b>After Delivery Note</b> — Invoice is created from the Delivery Note. Use the <i>Delivery Note Timing</i> section below to choose between <b>Immediate</b> (on DN submit) or <b>Scheduled</b> (hourly, with optional delay)."
+      "description": "Automatically create a Sales Invoice after the Sales Order is processed. Works with or without Payment Entry.<br><br><b>After Payment Entry</b> \u00e2\u20ac\u201d Invoice is created right after the Payment Entry succeeds. If Payment Entry is disabled, the Invoice is created immediately after Sales Order submission.<br><b>After Delivery Note</b> \u00e2\u20ac\u201d Invoice is created from the Delivery Note. Use the <i>Delivery Note Timing</i> section below to choose between <b>Immediate</b> (on DN submit) or <b>Scheduled</b> (hourly, with optional delay)."
     },
     {
       "default": "0",
@@ -481,7 +468,7 @@
       "fieldtype": "Section Break",
       "label": "Delivery Note Timing",
       "depends_on": "eval:doc.enable_sales_invoice && doc.sales_invoice_trigger == 'After Delivery Note'",
-      "description": "Controls <i>when</i> the Sales Invoice is created after a Delivery Note is submitted.<br><br><b>Immediate</b> — A background job is enqueued the moment the DN is submitted. The invoice appears within seconds.<br><b>Scheduled</b> — The hourly scheduler creates the invoice at the next run. Use <i>Delay After Submission</i> to impose a minimum wait before the scheduler acts."
+      "description": "Controls <i>when</i> the Sales Invoice is created after a Delivery Note is submitted.<br><br><b>Immediate</b> \u00e2\u20ac\u201d A background job is enqueued the moment the DN is submitted. The invoice appears within seconds.<br><b>Scheduled</b> \u00e2\u20ac\u201d The hourly scheduler creates the invoice at the next run. Use <i>Delay After Submission</i> to impose a minimum wait before the scheduler acts."
     },
     {
       "default": "Scheduled",
@@ -516,7 +503,6 @@
       "depends_on": "eval:doc.enable_sales_invoice",
       "description": "Naming series for Sales Invoices created from this store. Leave blank to use the default."
     },
-
     {
       "fieldname": "tab_returns",
       "fieldtype": "Tab Break",
@@ -526,7 +512,7 @@
       "fieldname": "section_cn_settings",
       "fieldtype": "Section Break",
       "label": "Credit Note",
-      "description": "When a Shopify refund webhook (<code>refunds/create</code>) arrives, create a Credit Note (return Sales Invoice) against the original Sales Invoice.<br><br><b>Auto</b> — Credit Note is created automatically in the background.<br><b>Manual</b> — The refund is logged; create the Credit Note yourself in ERPNext.<br><br><b>Prerequisite:</b> Sales Invoice creation must be enabled on the <b>Sales Invoice</b> tab."
+      "description": "When a Shopify refund webhook (<code>refunds/create</code>) arrives, create a Credit Note (return Sales Invoice) against the original Sales Invoice.<br><br><b>Auto</b> \u00e2\u20ac\u201d Credit Note is created automatically in the background.<br><b>Manual</b> \u00e2\u20ac\u201d The refund is logged; create the Credit Note yourself in ERPNext.<br><br><b>Prerequisite:</b> Sales Invoice creation must be enabled on the <b>Sales Invoice</b> tab."
     },
     {
       "default": "0",
@@ -570,7 +556,6 @@
       "depends_on": "eval:doc.enable_credit_note && doc.credit_note_creation == 'Auto'",
       "description": "Naming series for Credit Notes created from this store. Leave blank to use the ERPNext default."
     },
-
     {
       "fieldname": "tab_compliance",
       "fieldtype": "Tab Break",
@@ -580,7 +565,7 @@
       "fieldname": "section_e_compliance",
       "fieldtype": "Section Break",
       "label": "e-Invoice & e-Waybill (India GST)",
-      "description": "Requires the <b>India Compliance</b> app. After the Sales Invoice is submitted, automatically trigger e-Invoice and/or e-Waybill generation via the IRP portal.<br><br>Each document is processed in a separate background job — a portal error or timeout never blocks or reverses the Sales Invoice.<br><br><b>Prerequisites:</b><br>1. Sales Invoice creation must be enabled on the <b>Sales Invoice</b> tab.<br>2. <i>Auto-Submit Sales Invoice</i> must be enabled — e-Invoice and e-Waybill can only be generated for submitted documents.<br><br>India Compliance handles per-company eligibility internally (applicable companies list, turnover threshold, B2B/B2C) — ineligible invoices are skipped silently."
+      "description": "Requires the <b>India Compliance</b> app. After the Sales Invoice is submitted, automatically trigger e-Invoice and/or e-Waybill generation via the IRP portal.<br><br>Each document is processed in a separate background job \u00e2\u20ac\u201d a portal error or timeout never blocks or reverses the Sales Invoice.<br><br><b>Prerequisites:</b><br>1. Sales Invoice creation must be enabled on the <b>Sales Invoice</b> tab.<br>2. <i>Auto-Submit Sales Invoice</i> must be enabled \u00e2\u20ac\u201d e-Invoice and e-Waybill can only be generated for submitted documents.<br><br>India Compliance handles per-company eligibility internally (applicable companies list, turnover threshold, B2B/B2C) \u00e2\u20ac\u201d ineligible invoices are skipped silently."
     },
     {
       "default": "0",
@@ -600,9 +585,15 @@
       "fieldtype": "Check",
       "label": "Generate e-Waybill",
       "depends_on": "eval:doc.enable_sales_invoice",
-      "description": "Calls <code>generate_e_waybill()</code> from India Compliance after the Sales Invoice is submitted.<br><br><b>After Delivery Note trigger:</b> The Delivery Note is already created before the SI, so transporter details (Vehicle No, LR No, Transporter ID) are available. If those fields are filled on the DN, India Compliance includes Part B automatically — no manual step needed.<br><br><b>After Payment Entry trigger:</b> The SI is created before any Delivery Note, so the shipment hasn't been dispatched yet. Part B (transporter / vehicle details) must be updated manually on the Sales Invoice once the shipment is assigned."
+      "description": "Calls <code>generate_e_waybill()</code> from India Compliance after the Sales Invoice is submitted.<br><br><b>After Delivery Note trigger:</b> The Delivery Note is already created before the SI, so transporter details (Vehicle No, LR No, Transporter ID) are available. If those fields are filled on the DN, India Compliance includes Part B automatically \u00e2\u20ac\u201d no manual step needed.<br><br><b>After Payment Entry trigger:</b> The SI is created before any Delivery Note, so the shipment hasn't been dispatched yet. Part B (transporter / vehicle details) must be updated manually on the Sales Invoice once the shipment is assigned."
     },
-
+    {
+      "fieldname": "e_waybill_threshold",
+      "label": "e-Waybill Threshold (\u20b9)",
+      "fieldtype": "Currency",
+      "depends_on": "eval:doc.enable_e_waybill",
+      "description": "Minimum invoice value for e-Waybill generation. Leave blank to follow the threshold configured in GST Settings. Set this to avoid generating e-Waybills for low-value orders if GST Settings is misconfigured."
+    },
     {
       "fieldname": "tab_advanced",
       "fieldtype": "Tab Break",
@@ -612,7 +603,7 @@
       "fieldname": "section_failure",
       "fieldtype": "Section Break",
       "label": "Failure Alerts",
-      "description": "Email addresses to notify when automation fails. Covers three scenarios:<br>1. <b>Sales Order creation failure</b> — any error during order processing.<br>2. <b>Payment Entry failure</b> — Sales Order created but payment failed; requires manual attention.<br>3. <b>Sales Invoice failure</b> — Sales Order or Delivery Note processed but invoice creation failed; requires manual attention."
+      "description": "Email addresses to notify when automation fails. Covers three scenarios:<br>1. <b>Sales Order creation failure</b> \u00e2\u20ac\u201d any error during order processing.<br>2. <b>Payment Entry failure</b> \u00e2\u20ac\u201d Sales Order created but payment failed; requires manual attention.<br>3. <b>Sales Invoice failure</b> \u00e2\u20ac\u201d Sales Order or Delivery Note processed but invoice creation failed; requires manual attention."
     },
     {
       "fieldname": "failure_email_to",
@@ -647,7 +638,7 @@
       "fieldname": "section_field_mapping",
       "fieldtype": "Section Break",
       "label": "Custom Field Mapping",
-      "description": "Map any field from the Shopify order payload to a field on an ERPNext document.<br><br>Any standard or custom Sales Order field can be a target — e.g. <code>po_no</code>, <code>customer_gstin</code>, <code>custom_shopify_note</code>. Only internal system fields that control document identity or state are blocked (name, docstatus, owner, etc.).<br><br>Use dot-notation for nested Shopify values, e.g. <code>billing_address.company</code> or <code>customer.email</code>."
+      "description": "Map any field from the Shopify order payload to a field on an ERPNext document.<br><br>Any standard or custom Sales Order field can be a target \u00e2\u20ac\u201d e.g. <code>po_no</code>, <code>customer_gstin</code>, <code>custom_shopify_note</code>. Only internal system fields that control document identity or state are blocked (name, docstatus, owner, etc.).<br><br>Use dot-notation for nested Shopify values, e.g. <code>billing_address.company</code> or <code>customer.email</code>."
     },
     {
       "fieldname": "field_mapping",
@@ -655,7 +646,6 @@
       "label": "Field Mapping",
       "options": "Shopify Field Mapping"
     }
-
   ],
   "index_web_pages_for_search": 0,
   "is_single": 0,
