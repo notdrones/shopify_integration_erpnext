@@ -68,6 +68,23 @@ def _process_store(settings):
     """
     delay_hours = int(settings.get("si_dn_delay_hours") or 0)
 
+    # Compute the delay cutoffs in Python using the site timezone, then compare
+    # them against the stored timestamps in SQL.
+    #
+    # Frappe stores `creation` / Activity Log `creation` in the site timezone
+    # (System Settings → Time Zone, e.g. Asia/Kolkata).  MariaDB's NOW(),
+    # however, returns the database server time, which on Frappe Cloud is UTC.
+    # Comparing a stored IST timestamp against NOW() therefore understates a
+    # document's age by the UTC offset (5.5h for IST), so DNs were only picked
+    # up ~5.5h later than the configured delay.  now_datetime() returns the
+    # site-timezone "now", so cutoff vs stored-timestamp is an apples-to-apples
+    # comparison regardless of the database server timezone.
+    from frappe.utils import add_to_date, now_datetime
+
+    now = now_datetime()
+    submit_cutoff = add_to_date(now, hours=-delay_hours)            # al.creation <= this
+    creation_cutoff = add_to_date(now, hours=-(delay_hours + 2))    # dn.creation <= this
+
     dn_rows = frappe.db.sql(
         """
         SELECT DISTINCT dn.name AS dn_name
@@ -85,7 +102,7 @@ def _process_store(settings):
                   WHERE al.reference_doctype = 'Delivery Note'
                     AND al.reference_name = dn.name
                     AND al.operation = 'Submit'
-                    AND TIMESTAMPDIFF(HOUR, al.creation, NOW()) >= %(delay_hours)s
+                    AND al.creation <= %(submit_cutoff)s
               )
               -- Fallback: no Activity Log Submit row (logs disabled/purged/scripted submit).
               -- Use dn.creation with a 2-hour buffer so DNs are never permanently excluded.
@@ -96,7 +113,7 @@ def _process_store(settings):
                         AND al2.reference_name = dn.name
                         AND al2.operation = 'Submit'
                   )
-                  AND TIMESTAMPDIFF(HOUR, dn.creation, NOW()) >= %(delay_hours)s + 2
+                  AND dn.creation <= %(creation_cutoff)s
               )
           )
           AND NOT EXISTS (
@@ -107,7 +124,11 @@ def _process_store(settings):
                 AND si.docstatus != 2
           )
         """,
-        {"store": settings.shop_domain, "delay_hours": delay_hours},
+        {
+            "store": settings.shop_domain,
+            "submit_cutoff": submit_cutoff,
+            "creation_cutoff": creation_cutoff,
+        },
         as_dict=True,
     )
 
