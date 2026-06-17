@@ -44,7 +44,14 @@ Object.assign(frappe.listview_settings['Delivery Note'], {
         // label and colour is shown (Return → gray, Return Issued → grey,
         // Closed → green). These are not billing states — "Shopify" label
         // would be misleading here.
-        if (cint(doc.is_return) === 1 && doc.status === 'Return') {
+        //
+        // Return DNs (is_return = 1) never go through the auto-SI billing flow —
+        // they are handled as Credit Notes via the refunds/create webhook. So a
+        // return DN must always show its native ERPNext status (To Bill,
+        // Completed, Return, etc.), never the billing-aware "Shopify" label.
+        // Note: a sales-return DN's status is usually "To Bill" or "Completed",
+        // not literally "Return", so we must guard on is_return alone here.
+        if (cint(doc.is_return) === 1) {
             return _erpnext_dn_indicator ? _erpnext_dn_indicator(doc) : undefined;
         }
         if (doc.status === 'Closed' || doc.status === 'Return Issued') {
