@@ -145,7 +145,62 @@ def resolve_billing_from_gstin(gstin: str, customer_name: str) -> str | None:
     if portal_data:
         return _create_gst_address(gstin, portal_data, customer_name)
 
-    return None
+    # Pass 3 — portal unavailable: a customer-supplied valid GSTIN is
+    # authoritative on its own (the portal is only an enrichment source for the
+    # legal name / registered address).  Stamp the GSTIN onto the customer's
+    # existing billing address so India Compliance still classifies the order as
+    # B2B (Registered Regular).  Without this, a transient "Failed to Fetch
+    # GSTIN Info" portal error silently downgrades a B2B order to B2C.
+    return _stamp_gstin_on_billing_address(gstin, customer_name)
+
+
+def _stamp_gstin_on_billing_address(gstin: str, customer_name: str) -> str | None:
+    """
+    Fallback used when the IC portal can't be reached: write the validated GSTIN
+    onto the customer's existing billing Address so the Sales Invoice/Order is
+    classified as B2B.
+
+    Picks the customer's primary address, else the first linked Billing address.
+    Only stamps when the address has no GSTIN yet (never overwrites a different
+    one).  Returns the address name, or None when the customer has no usable
+    billing address yet.
+    """
+    if not frappe.db.has_column("Address", "gstin"):
+        return None
+
+    addr_name = frappe.db.get_value("Customer", customer_name, "customer_primary_address")
+    if not addr_name:
+        linked = frappe.get_all(
+            "Dynamic Link",
+            filters={
+                "link_doctype": "Customer",
+                "link_name":    customer_name,
+                "parenttype":   "Address",
+            },
+            pluck="parent",
+        )
+        for cand in linked:
+            if frappe.db.get_value("Address", cand, "address_type") == "Billing":
+                addr_name = cand
+                break
+
+    if not addr_name:
+        return None
+
+    existing_gstin = frappe.db.get_value("Address", addr_name, "gstin")
+    if existing_gstin and existing_gstin != gstin:
+        # The billing address already carries a different GSTIN — don't clobber it.
+        return addr_name
+
+    if not existing_gstin:
+        frappe.db.set_value(
+            "Address",
+            addr_name,
+            {"gstin": gstin, "gst_category": "Registered Regular"},
+        )
+    # Promote as the customer's preferred billing address (tax/billing only).
+    frappe.db.set_value("Customer", customer_name, "customer_primary_address", addr_name)
+    return addr_name
 
 
 # ── Internal helpers ───────────────────────────────────────────────────────────
